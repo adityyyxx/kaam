@@ -1,0 +1,54 @@
+{
+    "type": "notion_page",
+    "title": "Topic Title",
+    "blocks": [
+      {
+        "type": "callout",
+        "icon": "📌",
+        "content": "Short overview of the topic in 2–3 lines."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Core Concepts"
+      },
+      {
+        "type": "bullets",
+        "items": [
+          "**Concept 1** – short explanation",
+          "**Concept 2** – short explanation"
+        ]
+      },
+      {
+        "type": "code",
+        "language": "text",
+        "content": "Formula or syntax here"
+      },
+      {
+        "type": "table",
+        "headers": ["Feature", "Option A", "Option B"],
+        "rows": [
+          ["Speed", "Fast", "Moderate"],
+          ["Use Case", "X", "Y"]
+        ]
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "callout",
+        "icon": "🧠",
+        "content": "Exam tips, shortcuts, or mnemonics."
+      }
+    ]
+  }
+
+
+
+
+
+
+
+
+
+

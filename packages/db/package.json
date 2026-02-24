@@ -1,0 +1,29 @@
+{
+  "name": "db",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "prisma generate && prisma migrate dev",
+    "generate": "prisma generate",
+    "build": "prisma generate && tsc",
+    "clean": "powershell -Command \"if (Test-Path 'src/generated/prisma') { Remove-Item -Recurse -Force 'src/generated/prisma' }\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "prisma": "^6",
+    "@repo/typescript-config": "workspace:*"
+  },
+  "dependencies": {
+    "@prisma/client": "^6"
+  }
+}

@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id    @default(uuid())
+  name      String
+  email     String  @unique
+  password  String?
+  
+  provider      String?   // "google", "local", etc.
+  providerId    String?   // Google's user ID
+  avatarUrl     String?   // Profile picture from Google
+
+  chatRooms ChatRoom[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ChatRoom: A modern chat application room that stores all messages and generated documents
+model ChatRoom {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+
+  title     String?    // unique title per user, auto-extracted from first message
+  messages  Message[]  // All messages in this chat room (user and assistant)
+
+  // Generated documents/notes in this chat room
+  documents Document[]
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatRoomId String
+  chatRoom  ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  role      MessageRole  // "user" or "assistant"
+  content   String        // plain text content of the message
+  meta      Json?         // model used, token count, etc.
+
+  createdAt DateTime      @default(now())
+
+  @@index([chatRoomId])
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+
+model Document {
+  id          String         @id @default(uuid())
+
+  chatRoomId  String?        // documents belong to a specific chat room (optional for backward compatibility)
+  chatRoom    ChatRoom?      @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  topic       String?
+  title       String?
+  content     Json           // structured canonical JSON
+  sourceLang  String         @default("en")
+
+  modelUsed   String?        
+  version     Int            @default(1)
+
+  embeddings   DocumentEmbedding[]
+  meta        Json?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([chatRoomId])
+  @@index([userId])
+}
+
+model DocumentEmbedding {
+  id         String   @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  chunk      String
+  embedding   String
+  chunkIndex      Int
+  tokenCount  Int?
+  pageNumber  Int?
+  section     String? 
+
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+  @@index([chunkIndex])
+}

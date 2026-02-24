@@ -1,0 +1,45 @@
+
+> newfile@ dev D:\open-source\lingo project\newfile
+> turbo run dev
+
+• turbo 2.7.1
+• Packages in scope: @repo/eslint-config, @repo/typescript-config, @repo/ui, backend, db, frontend, schemas
+• Running dev in 7 packages
+• Remote caching disabled
+backend:dev: cache bypass, force executing b6759fac1d20c94a
+db:dev: cache bypass, force executing 74b5edf942b8306d
+frontend:dev: cache bypass, force executing 463ad0cb70f80f25
+backend:dev: 
+backend:dev: > backend@1.0.0 dev D:\open-source\lingo project\newfile\apps\backend
+backend:dev: > tsc && node dist/index.js
+backend:dev: 
+db:dev: 
+db:dev: > db@1.0.0 dev D:\open-source\lingo project\newfile\packages\db
+db:dev: > prisma generate && prisma migrate dev
+db:dev: 
+frontend:dev: 
+frontend:dev: > frontend@0.1.0 dev D:\open-source\lingo project\newfile\apps\frontend
+frontend:dev: > cross-env NODE_OPTIONS=--no-warnings=DEP0060 next dev
+frontend:dev: 
+frontend:dev: [32m✔[0m [33mConsole Ninja[0m extension is connected to [33mNext.js[0m, see [36mhttps://tinyurl.com/2vt8jxzw[0m
+db:dev: Loaded Prisma config from prisma.config.ts.
+db:dev: 
+db:dev: Prisma config detected, skipping environment variable loading.
+db:dev: Prisma schema loaded from prisma\schema.prisma
+db:dev: Error: 
+db:dev: EPERM: operation not permitted, rename 'D:\open-source\lingo project\newfile\packages\db\src\generated\prisma\query_engine-windows.dll.node.tmp3556' -> 'D:\open-source\lingo project\newfile\packages\db\src\generated\prisma\query_engine-windows.dll.node'
+db:dev: 
+db:dev: 
+db:dev:  ELIFECYCLE  Command failed with exit code 1.
+frontend:dev: ⚠ Console Ninja Turbopack support is a PRO feature, [33mcurrently available to community users while in preview[0m
+frontend:dev: ⚠ Port 3000 is in use by process 37936, using available port 3002 instead.
+db:dev: ERROR: command finished with error: command (D:\open-source\lingo project\newfile\packages\db) C:\Users\Atharv\AppData\Local\pnpm\.tools\pnpm\9.0.0\bin\pnpm.CMD run dev exited (1)
+db#dev: command (D:\open-source\lingo project\newfile\packages\db) C:\Users\Atharv\AppData\Local\pnpm\.tools\pnpm\9.0.0\bin\pnpm.CMD run dev exited (1)
+
+ Tasks:    0 successful, 3 total
+Cached:    0 cached, 3 total
+  Time:    5.71s 
+Failed:    db#dev
+
+ ERROR  run failed: command  exited (1)
+ ELIFECYCLE  Command failed with exit code 1.
