@@ -164,33 +164,13 @@ export const Hero = () => {
             initial="hidden"
             animate="visible"
           >
-            Create high-quality structured notes with AI, then instantly translate them into multiple languages using Lingo.dev. 
+            Create high-quality structured notes with AI, then instantly translate them into multiple languages using Lingo.dev.
             Perfect for{" "}
             <span className="text-blue-500 font-semibold">
               <TypeWriter strings={noteTypes} />
             </span>.
           </motion.p>
-          <motion.div
-            className="flex items-center justify-center gap-2"
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <Link href="dashboard">
-              <ShineBorder
-                borderWidth={3}
-                className="border cursor-pointer h-auto w-auto p-2 bg-white/5 backdrop-blur-md dark:bg-black/5"
-                color={["#FF007F", "#39FF14", "#00FFFF"]}
-              >
-                <Button className="w-full rounded-xl" onClick={() => router.push("/dashboard")}>
-                  Generate Notes
-                </Button>
-              </ShineBorder>
-            </Link>
-            <Link href="#features">
-              <Button className="rounded-xl" variant="outline">Learn More</Button>
-            </Link>
-          </motion.div>
+
         </div>
       </motion.div>
     </section>

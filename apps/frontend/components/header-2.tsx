@@ -78,7 +78,9 @@ export function Header() {
 					<Link href="/signin">
 						<Button variant="outline">Sign In</Button>
 					</Link>
-					<Button>Get Started</Button>
+					<Link href="/signin">
+						<Button>Generate Notes</Button>
+					</Link>
 				</div>
 				<div className="flex items-center gap-2 md:hidden">
 					<ThemeToggle />
@@ -124,7 +126,9 @@ export function Header() {
 								Sign In
 							</Button>
 						</Link>
-						<Button className="w-full">Get Started</Button>
+						<Link href="/signin" className="w-full">
+							<Button className="w-full">Generate Notes</Button>
+						</Link>
 					</div>
 				</div>
 			</div>
