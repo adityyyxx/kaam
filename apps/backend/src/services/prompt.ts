@@ -1,9 +1,9 @@
 // Exam type detection from user queries
-export type ExamType = 
-    | "JEE_MAIN" 
-    | "JEE_ADVANCED" 
-    | "BOARD_10" 
-    | "BOARD_12" 
+export type ExamType =
+    | "JEE_MAIN"
+    | "JEE_ADVANCED"
+    | "BOARD_10"
+    | "BOARD_12"
     | "NEET"
     | "GENERAL";
 
@@ -15,37 +15,15 @@ export interface ExamContext {
 }
 
 /**
- * Detects if user wants to generate structured notes
- */
-export function shouldGenerateNotes(userQuery: string, messageHistory?: string[]): boolean {
-    const query = (userQuery + " " + (messageHistory?.join(" ") || "")).toLowerCase();
-    const noteKeywords = [
-        "generate notes",
-        "create notes",
-        "make notes",
-        "prepare notes",
-        "write notes",
-        "notes for",
-        "notes on",
-        "study notes",
-        "exam notes",
-        "summary notes"
-    ];
-    
-    return noteKeywords.some(keyword => query.includes(keyword)) || 
-           query.match(/\b(jee|neet|board|class 10|class 12)\b/) !== null;
-}
-
-/**
  * Detects exam type from user query or message history
  */
 export function detectExamType(userQuery: string, messageHistory?: string[]): ExamContext {
     const query = (userQuery + " " + (messageHistory?.join(" ") || "")).toLowerCase();
-    
+
     let examType: ExamType = "GENERAL";
     let subject: string | undefined;
     let language: string | undefined;
-    
+
     // JEE Advanced detection
     if (query.match(/\b(jee advanced|jee adv|iit jee|iit-jee|joint entrance exam advanced)\b/)) {
         examType = "JEE_ADVANCED";
@@ -66,7 +44,7 @@ export function detectExamType(userQuery: string, messageHistory?: string[]): Ex
     else if (query.match(/\b(class 10|10th|tenth|cbse 10|icse 10|board 10)\b/)) {
         examType = "BOARD_10";
     }
-    
+
     // Detect subject
     const subjects = {
         physics: ["physics", "phy"],
@@ -80,34 +58,35 @@ export function detectExamType(userQuery: string, messageHistory?: string[]): Ex
         civics: ["civics", "political science", "pol sci"],
         economics: ["economics", "eco"],
     };
-    
+
     for (const [subj, keywords] of Object.entries(subjects)) {
         if (keywords.some(keyword => query.includes(keyword))) {
             subject = subj;
             break;
         }
     }
-    
+
     // Detect language preference
     if (query.match(/\b(hindi|hindi mein|हिंदी)\b/)) {
         language = "hindi";
     } else if (query.match(/\b(english|english me|इंग्लिश)\b/)) {
         language = "english";
     }
-    
-    return { 
-        examType, 
-        ...(subject && { subject }), 
-        ...(language && { language }) 
+
+    return {
+        examType,
+        ...(subject && { subject }),
+        ...(language && { language })
     };
 }
 
 /**
- * Builds exam-specific system prompt with detailed instructions
+ * Builds exam-specific system prompt with ALWAYS-ON structured JSON output.
+ * ALL responses are structured using the notion_page JSON schema by default.
  */
-export function buildSystemPrompt(userQuery: string, messageHistory?: string[]): string {
+export function buildSystemPrompt(userQuery: string, messageHistory?: string[], ragContext?: string): string {
     const context = detectExamType(userQuery, messageHistory);
-    
+
     const basePrompt = `You are an expert AI tutor specialized in generating comprehensive, detailed, and exam-focused study notes for Indian competitive and board examinations.
 
 Your primary goal is to create well-structured, clear, descriptive, and exam-relevant study materials that help students excel in their examinations.
@@ -211,81 +190,51 @@ EXAM CONTEXT: General Educational Content
 - If the user query contains Hindi words, translate them to English and respond in English
 - Default to English unless explicitly requested otherwise`;
 
-    const noteStructureGuide = `
-NOTE STRUCTURE GUIDELINES:
-1. Use clear headings (##) and subheadings (###)
-2. Organize content in logical sections
-3. Use bullet points (•) and numbered lists for clarity
-4. Include key formulas, definitions, or concepts in highlighted format
-5. Provide examples with step-by-step solutions where applicable
-6. Add summary or quick revision points at the end
-7. Use markdown formatting for better readability:
-   - **Bold** for important terms
-   - *Italic* for emphasis
-   - Code blocks (\`\`\`language) for formulas, code, or JSON - these will be rendered with syntax highlighting
-   - Inline code (\`code\`) for technical terms
-   - Tables for comparative data
-   - Lists for points and examples
-8. When outputting JSON, wrap it in \`\`\`json code blocks - it will be displayed as a formatted code block in the UI
+    // RAG context injection
+    const ragContextBlock = ragContext ? `\n\nRELEVANT CONTEXT FROM PREVIOUS CONVERSATION:\n${ragContext}\n\nUse the above context to enrich your response with continuity and relevant prior knowledge.` : "";
 
-GENERATION PRINCIPLES:
-- Be accurate and factually correct
-- Provide exam-relevant content that directly helps in preparation
-- Be DESCRIPTIVE and COMPREHENSIVE - include detailed explanations, not just bullet points
-- Maintain appropriate depth based on exam level, but always err on the side of being more detailed
-- Include practical tips, common mistakes to avoid, and real-world applications
-- Provide context and background for concepts to aid understanding
-- Use clear, professional English language throughout
-- Include examples, analogies, and step-by-step explanations where helpful
-- Use Indian educational context and examples where relevant
-- Make notes self-contained and comprehensive - students should understand concepts from the notes alone
-- If the user asks vague questions, ask clarifying questions about:
-  - Specific topic or chapter
-  - Exam type (if not detected)
-  - Desired format or focus areas
-  - Language preference (default to English)`;
+    // ALWAYS-ON structured output instructions
+    const structuredOutputInstructions = `
 
-    // Check if user wants structured notes
-    const wantsNotes = shouldGenerateNotes(userQuery, messageHistory);
-    
-    let structuredOutputInstructions = "";
-    if (wantsNotes) {
-        structuredOutputInstructions = `
+══════════════════════════════════════════════════
+MANDATORY STRUCTURED OUTPUT FORMAT (ALWAYS REQUIRED)
+══════════════════════════════════════════════════
 
-CRITICAL: When generating structured notes, you MUST output your response as valid JSON following this exact schema:
+You MUST ALWAYS output your response as valid JSON following this EXACT schema. NO exceptions.
+Do NOT write plain text or markdown. ONLY output the JSON object.
 
 {
   "type": "notion_page",
-  "title": "Your Topic Title Here",
+  "title": "Clear, descriptive title for this response",
   "blocks": [
     {
       "type": "callout",
       "icon": "📌",
-      "content": "Provide a comprehensive overview or detailed key point here. Be descriptive and informative, not brief."
+      "content": "Comprehensive overview or key insight. Be descriptive and informative."
     },
     {
       "type": "heading",
       "level": 2,
-      "content": "Section Heading - Follow with detailed content blocks that provide comprehensive explanations"
+      "content": "Main Section Heading"
     },
     {
       "type": "bullets",
       "items": [
-        "**Concept 1** – Provide a detailed, comprehensive explanation that helps students fully understand the concept. Include context, examples, and practical applications.",
-        "**Concept 2** – Write descriptive explanations, not brief summaries. Each bullet should be substantial and informative."
+        "**Term or Concept** – Detailed, descriptive explanation with context, examples, and depth.",
+        "**Another Term** – Each bullet should be a complete, informative sentence or paragraph."
       ]
     },
     {
       "type": "code",
       "language": "text",
-      "content": "Formula or syntax here"
+      "content": "Formulas, equations, or structured data here"
     },
     {
       "type": "table",
-      "headers": ["Column 1", "Column 2"],
+      "headers": ["Column A", "Column B", "Column C"],
       "rows": [
-        ["Row 1 Col 1", "Row 1 Col 2"],
-        ["Row 2 Col 1", "Row 2 Col 2"]
+        ["Row 1 A", "Row 1 B", "Row 1 C"],
+        ["Row 2 A", "Row 2 B", "Row 2 C"]
       ]
     },
     {
@@ -294,51 +243,62 @@ CRITICAL: When generating structured notes, you MUST output your response as val
   ]
 }
 
-IMPORTANT RULES FOR JSON OUTPUT:
-1. Output ONLY the JSON object, wrapped in \`\`\`json code blocks
-2. Ensure all JSON is valid and properly formatted
-3. Include all required fields (type, title, blocks)
-4. Block types must be exactly: "callout", "heading", "bullets", "code", "table", or "divider"
-5. Heading levels must be integers 1-6
-6. All content fields should support markdown formatting
-7. For exam notes, include relevant callouts with detailed tips, formulas in code blocks, and comparison tables
-8. CRITICAL: Make all content DESCRIPTIVE and COMPREHENSIVE - each bullet point, callout, and section should contain substantial, detailed information
-9. LANGUAGE: Generate ALL content in English language only - do not use Hindi or any other language
-10. Each item in bullets array should be a complete, descriptive sentence or paragraph, not just a keyword or phrase
-11. NOTE: JSON responses will be rendered as syntax-highlighted code blocks in the UI, so ensure proper formatting for readability
+STRICT RULES:
+1. Output ONLY the raw JSON object — no markdown fences, no preamble, no trailing text
+2. All block types must be exactly one of: "callout", "heading", "bullets", "code", "table", "divider"
+3. "heading" level must be an integer 1–6
+4. All string fields must be valid JSON strings (escape special chars, no raw newlines inside strings)
+5. "bullets" items must be an array of strings — make each one substantive and descriptive
+6. For conversational or short answers, still use the JSON format with a concise title + 1–3 blocks
+7. Use "callout" blocks for summaries, tips, warnings, mnemonics, and key takeaways
+8. Use "code" blocks for formulas, equations, algorithms, chemical reactions
+9. Use "table" blocks for comparisons, data, properties, differences
+10. Use "divider" blocks to separate major sections
+11. Content depth: each bullet ≥ 1 complete descriptive sentence; each callout ≥ 2 sentences
+12. NEVER output plain text or markdown outside the JSON
 
-Example structure for exam notes:
-- Start with a callout providing comprehensive overview of the topic
-- Use headings (level 2) for major sections with detailed content
-- Use bullets for key concepts with DESCRIPTIVE explanations, not just keywords
-- Use code blocks for formulas and equations with explanations
-- Use tables for comparisons (e.g., formulas, concepts) with detailed descriptions
-- Include multiple callouts throughout for important tips, warnings, and mnemonics
-- Ensure each block contains substantial, descriptive content
-
-CONTENT DEPTH REQUIREMENTS:
-- Each bullet point should be descriptive (e.g., "**Newton's First Law** - An object at rest stays at rest, and an object in motion stays in motion at constant velocity, unless acted upon by an external force. This fundamental principle of physics means that inertia is the natural state of matter.")
-- Headings should be followed by comprehensive explanations
-- Callouts should provide detailed insights, not just one-line tips
-- Tables should include descriptive cells, not just data points
-- Code blocks should include formulas with variable explanations
-
-LANGUAGE: Generate ALL content in English. Do NOT use Hindi or any other language unless explicitly requested.
-
-DO NOT include any text outside the JSON code block when generating structured notes.`;
-    }
+CONTENT STRUCTURE TEMPLATE (adapt as needed):
+- Open with a "callout" giving a comprehensive overview (icon: 📌 or relevant emoji)
+- Use level-2 "heading" blocks for major sections
+- Use level-3 "heading" blocks for subsections
+- Use "bullets" for key concepts, points, and lists
+- Use "code" for any formulas, equations, or structured content
+- Use "table" for comparisons or structured data
+- Close with a "callout" summary / quick revision (icon: 🔑 or ⚡)`;
 
     return `${basePrompt}
 ${examSpecificInstructions}
 ${subjectInstructions}
 ${languageInstructions}
-${noteStructureGuide}${structuredOutputInstructions}
+${ragContextBlock}
+${structuredOutputInstructions}
 
 FINAL REMINDERS:
 - LANGUAGE: Generate ALL content in English language ONLY (unless explicitly requested in Hindi)
-- DESCRIPTIVE: Be comprehensive and detailed - provide substantial explanations, not brief summaries
+- DESCRIPTIVE: Be comprehensive and detailed — provide substantial explanations, not brief summaries
 - QUALITY: Your responses should be exam-focused, well-structured, descriptive, and directly useful for student preparation
 - DEPTH: Include context, background, examples, and thorough explanations for each concept
-${wantsNotes ? "Output structured notes as JSON when requested. Ensure each block contains descriptive, comprehensive content." : "Generate one complete, comprehensive, and detailed response rather than partial or stream-of-consciousness content."}`;
+- FORMAT: Output ONLY valid JSON — the frontend renders it as beautiful structured notes`;
 }
-  
+
+/**
+ * Builds a lightweight system prompt for the RAG planning step.
+ * The planner identifies what prior context is relevant and what to retrieve.
+ */
+export function buildRagPlannerPrompt(): string {
+    return `You are an AI assistant that helps retrieve relevant context from conversation history.
+
+Given the current user query and recent message history, identify:
+1. The main topic/concept being asked about
+2. Any directly related concepts or prior explanations from the conversation history that would be useful context
+3. Key terms and definitions already established in the conversation
+
+Respond in this EXACT JSON format (no extra text):
+{
+  "topic": "main topic extracted from the query",
+  "relevant_context": "2-3 sentence summary of relevant prior discussion that should inform the response",
+  "key_terms": ["term1", "term2", "term3"]
+}
+
+If there is no relevant prior context, set "relevant_context" to "" and "key_terms" to [].`;
+}

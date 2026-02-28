@@ -9,11 +9,11 @@ import { detectExamType } from "../prompt.js";
 export async function generateChatTitle(messages: { role: "user" | "assistant", content: string }[]): Promise<string> {
     // Take the first few messages to generate a title (first 3-4 exchanges)
     const contextMessages = messages.slice(0, Math.min(6, messages.length));
-    
+
     // Detect exam context from conversation
     const allContent = contextMessages.map(m => m.content).join(" ");
     const examContext = detectExamType(allContent);
-    
+
     // Build context-aware title prompt
     let contextHint = "";
     if (examContext.examType !== "GENERAL") {
@@ -26,7 +26,7 @@ export async function generateChatTitle(messages: { role: "user" | "assistant", 
         };
         contextHint = `\n\nNote: This conversation is related to ${examNames[examContext.examType]}${examContext.subject ? ` - ${examContext.subject}` : ""}. Include this context in the title if relevant.`;
     }
-    
+
     const titlePrompt = `Based on the following conversation, generate a concise, descriptive title (maximum 60 characters). The title should capture the main topic, subject, or exam context of this conversation.${contextHint}
 
 Return ONLY the title, nothing else, no quotes, no explanation.
@@ -38,11 +38,11 @@ Title:`;
 
     try {
         const result = await generateText({
-            model: groq("openai/gpt-oss-20b"),
+            model: groq("llama-3.3-70b-versatile"),
             messages: [
-                { 
-                    role: "system", 
-                    content: "You are a helpful assistant that generates concise, descriptive titles for educational conversations and study note chats. Titles should be clear, informative, and include exam/subject context when relevant." 
+                {
+                    role: "system",
+                    content: "You are a helpful assistant that generates concise, descriptive titles for educational conversations and study note chats. Titles should be clear, informative, and include exam/subject context when relevant."
                 },
                 { role: "user", content: titlePrompt }
             ],
@@ -50,25 +50,25 @@ Title:`;
         });
 
         let title = result.text.trim();
-        
+
         // Remove quotes if present
         title = title.replace(/^["']|["']$/g, '');
-        
+
         // Remove common prefixes like "Title:" if the model adds them
         title = title.replace(/^(Title|title):\s*/i, '').trim();
-        
+
         // Ensure it's not too long
         if (title.length > 60) {
             title = title.substring(0, 57) + '...';
         }
-        
+
         return title || "New Chat";
     } catch (error) {
         console.error('Error generating title:', error);
         // Fallback to simple extraction with exam context
         const firstUserMessage = messages.find(m => m.role === 'user')?.content || '';
         let fallbackTitle = firstUserMessage.substring(0, 50) || "New Chat";
-        
+
         // Add exam context to fallback if detected
         if (examContext.examType !== "GENERAL" && examContext.subject) {
             const examNames: Record<string, string> = {
@@ -80,7 +80,7 @@ Title:`;
             };
             fallbackTitle = `${examNames[examContext.examType]} - ${examContext.subject.charAt(0).toUpperCase() + examContext.subject.slice(1)}`;
         }
-        
+
         return fallbackTitle;
     }
 }

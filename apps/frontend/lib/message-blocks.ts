@@ -50,6 +50,12 @@ export interface DividerBlock {
   type: "divider";
 }
 
+export interface CalloutBlock {
+  type: "callout";
+  icon: string;
+  text: string;
+}
+
 export type MessageBlock =
   | ParagraphBlock
   | HeadingBlock
@@ -59,7 +65,8 @@ export type MessageBlock =
   | InlineCodeBlock
   | TableBlock
   | QuoteBlock
-  | DividerBlock;
+  | DividerBlock
+  | CalloutBlock;
 
 export type MessageBlocks = MessageBlock[];
 

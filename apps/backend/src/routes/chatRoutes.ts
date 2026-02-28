@@ -2,9 +2,10 @@ import express from "express";
 import { authenticate } from "../middleware.js";
 import { db } from "db";
 import { getRecentMessages } from "../services/memory.js";
-import { generateAIResponse } from "../services/ai-service.js";
-import { buildSystemPrompt } from "../services/prompt.js";
+import { generateAIResponse, planRagContext } from "../services/ai-service.js";
+import { buildSystemPrompt, buildRagPlannerPrompt } from "../services/prompt.js";
 import { generateChatTitle } from "../services/ai/generateTitle.js";
+
 const router: express.Router = express.Router();
 
 router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
@@ -28,7 +29,7 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
                 content: content,
                 createdAt: new Date(),
             }
-        })
+        });
 
         const recentMessages = await getRecentMessages(chatRoomId as string);
 
@@ -37,15 +38,49 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
 
         // Build context from recent messages for exam detection
         const messageHistory = chronologicalMessages.map(m => m.content);
-        const userQuery = content; // Current user message
+        const userQuery = content;
 
+        // ─── AGENTIC RAG STEP ────────────────────────────────────────────────
+        // 1. Run the planner to extract relevant prior context from history
+        let ragContext: string | undefined;
+        if (chronologicalMessages.length >= 2) {
+            try {
+                const plannerPrompt = buildRagPlannerPrompt();
+                const ragPlan = await planRagContext(
+                    userQuery,
+                    chronologicalMessages.map(m => ({
+                        role: m.role as "user" | "assistant",
+                        content: m.content,
+                    })),
+                    plannerPrompt,
+                );
+
+                if (ragPlan && ragPlan.relevant_context && ragPlan.relevant_context.trim().length > 10) {
+                    // Build a rich context string from the plan
+                    const keyTermsStr = ragPlan.key_terms && ragPlan.key_terms.length > 0
+                        ? `\nKey terms already covered: ${ragPlan.key_terms.join(", ")}`
+                        : "";
+                    ragContext = `Topic context: ${ragPlan.topic}\nPrior discussion summary: ${ragPlan.relevant_context}${keyTermsStr}`;
+                    console.log(`[RAG] Context retrieved for "${userQuery}": topic="${ragPlan.topic}"`);
+                }
+            } catch (ragError) {
+                // RAG planning is non-critical — proceed without it
+                console.warn("[RAG] Planning step skipped due to error:", ragError);
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        // 2. Build system prompt with RAG context injected
+        const systemPrompt = buildSystemPrompt(userQuery, messageHistory, ragContext);
+
+        // 3. Generate the main response (always structured JSON format)
         const stream = await generateAIResponse({
             messages: chronologicalMessages.map(message => ({
                 role: message.role as "user" | "assistant",
                 content: message.content,
             })),
-            systemPrompt: buildSystemPrompt(userQuery, messageHistory),
-        })
+            systemPrompt,
+        });
 
         res.setHeader('Content-Type', 'text/event-stream');
 
@@ -65,7 +100,7 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
                 content: fullText,
                 createdAt: new Date(),
             }
-        })
+        });
 
         // Update timestamp immediately
         await db.chatRoom.update({
@@ -74,7 +109,6 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
         });
 
         // Generate title asynchronously (don't await - let it run in background)
-        // This way the response isn't blocked by title generation
         (async () => {
             try {
                 const allMessages = await db.message.findMany({
@@ -84,11 +118,8 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
                 });
 
                 const messageCount = allMessages.length;
-                
-                // Generate title if:
-                // - No title exists and we have at least 2 messages (1 exchange)
-                // - Or update periodically (every 5 messages)
-                const shouldGenerateTitle = 
+
+                const shouldGenerateTitle =
                     (!chatRoom.title || chatRoom.title.trim() === '') && messageCount >= 2 ||
                     (messageCount >= 4 && messageCount % 5 === 0);
 
@@ -99,7 +130,7 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
                     }));
 
                     const newTitle = await generateChatTitle(conversationMessages);
-                    
+
                     await db.chatRoom.update({
                         where: { id: chatRoomId as string },
                         data: { title: newTitle }
@@ -113,7 +144,7 @@ router.post('/chat/:chatRoomId', authenticate, async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: 'Failed to chat', message: error });
     }
-})
+});
 
 router.get('/chat/:chatRoomId/messages', authenticate, async (req, res) => {
     const { chatRoomId } = req.params;
@@ -125,11 +156,11 @@ router.get('/chat/:chatRoomId/messages', authenticate, async (req, res) => {
             orderBy: {
                 createdAt: 'asc'
             }
-        })
+        });
         return res.status(200).json({ success: true, messages: msg });
     } catch (error) {
         return res.status(500).json({ error: 'Failed to get messages', message: error });
     }
-})
+});
 
 export { router as chatRoutes };

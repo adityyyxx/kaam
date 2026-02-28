@@ -11,6 +11,7 @@ import { InlineCodeBlock } from "./inline-code-block";
 import { TableBlockComponent } from "./table-block";
 import { QuoteBlock } from "./quote-block";
 import { DividerBlock } from "./divider-block";
+import { CalloutBlockComponent } from "./callout-block";
 import { cn } from "@/lib/utils";
 
 interface BlockRendererProps {
@@ -33,14 +34,14 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
       {blocks.map((block, index) => {
         const isCompactBlock = block.type === "divider" || block.type === "inline-code";
         const spacing = isCompactBlock ? "mb-2" : "mb-4 last:mb-0";
-        
+
         return (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ 
-              duration: 0.2, 
+            transition={{
+              duration: 0.2,
               delay: index * 0.02,
               ease: "easeOut"
             }}
@@ -64,6 +65,8 @@ export function BlockRenderer({ blocks, className }: BlockRendererProps) {
                   return <TableBlockComponent block={block} />;
                 case "quote":
                   return <QuoteBlock block={block} />;
+                case "callout":
+                  return <CalloutBlockComponent block={block} />;
                 case "divider":
                   return <DividerBlock block={block} />;
                 default:
